@@ -1,0 +1,49 @@
+name: AST Scan Orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_full_name:
+        description: 'Repository to scan (owner/repo)'
+        required: true
+        type: string
+      branch:
+        description: 'Branch that was merged'
+        required: true
+        type: string
+      commit_sha:
+        description: 'Merge commit SHA'
+        required: true
+        type: string
+      pr_number:
+        description: 'Pull request number'
+        required: true
+        type: string
+
+jobs:
+  run-ast-scan:
+    runs-on: ubuntu-latest
+    container:
+      # Corrected image name from the Docker Hub link you provided
+      image: convisoappsec/convisocli:latest
+      env:
+        CONVISO_API_KEY: ${{ secrets.CONVISO_API_KEY }}
+
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ inputs.repo_full_name }}
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+
+      - name: Run Conviso AST Scan
+        run: |
+          echo "Starting AST scan for ${{ inputs.repo_full_name }}"
+          # Running AST scan without security gate enforcement (non-blocking)
+          conviso ast run --vulnerability-auto-close --company-id 520
+
+      - name: Report results
+        if: always()
+        run: |
+          echo "Scan process finished for PR #${{ inputs.pr_number }}"
